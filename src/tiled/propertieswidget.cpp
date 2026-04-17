@@ -1634,207 +1634,207 @@ public:
         : ObjectProperties(document, object, parent)
     {
         mIdProperty = new IntProperty(
-                    tr("ID"),
-                    [this] { return mapObject()->id(); });
+            tr("ID"),
+            [this] { return mapObject()->id(); });
         mIdProperty->setEnabled(false);
 
         mTemplateProperty = new UrlProperty(
-                    tr("Template"),
-                    [this] {
-                        if (auto objectTemplate = mapObject()->objectTemplate())
-                            return QUrl::fromLocalFile(objectTemplate->fileName());
-                        return QUrl();
-                    });
+            tr("Template"),
+            [this] {
+                if (auto objectTemplate = mapObject()->objectTemplate())
+                    return QUrl::fromLocalFile(objectTemplate->fileName());
+                return QUrl();
+            });
         mTemplateProperty->setEnabled(false);
 
         mNameProperty = new StringProperty(
-                    tr("Name"),
-                    [this] {
-                        return mapObject()->name();
-                    },
-                    [this](const QString &value) {
-                        changeMapObject(MapObject::NameProperty, value);
-                    });
+            tr("Name"),
+            [this] {
+                return mapObject()->name();
+            },
+            [this](const QString &value) {
+                changeMapObject(MapObject::NameProperty, value);
+            });
 
         mVisibleProperty = new BoolProperty(
-                    tr("Visible"),
-                    [this] {
-                        return mapObject()->isVisible();
-                    },
-                    [this](const bool &value) {
-                        changeMapObject(MapObject::VisibleProperty, value);
-                    });
+            tr("Visible"),
+            [this] {
+                return mapObject()->isVisible();
+            },
+            [this](const bool &value) {
+                changeMapObject(MapObject::VisibleProperty, value);
+            });
         mVisibleProperty->setNameOnCheckBox(true);
 
         mOpacityProperty = new IntProperty(
-                    tr("Opacity"),
-                    [this] { return qRound(mapObject()->opacity() * 100); },
-                    [this](const int &value) {
-                        changeMapObject(MapObject::OpacityProperty,
-                                        qreal(value) / 100);
-                    });
+            tr("Opacity"),
+            [this] { return qRound(mapObject()->opacity() * 100); },
+            [this](const int &value) {
+                changeMapObject(MapObject::OpacityProperty,
+                                qreal(value) / 100);
+            });
         mOpacityProperty->setRange(0, 100);
         mOpacityProperty->setSuffix(tr("%"));
         mOpacityProperty->setSliderEnabled(true);
 
         mPositionProperty = new PointFProperty(
-                    tr("Position"),
-                    [this] {
-                        return mapObject()->position();
-                    },
-                    [this](const QPointF &value) {
-                        const auto oldValue = mapObject()->position();
-                        const bool changedX = oldValue.x() != value.x();
-                        const bool changedY = oldValue.y() != value.y();
+            tr("Position"),
+            [this] {
+                return mapObject()->position();
+            },
+            [this](const QPointF &value) {
+                const auto oldValue = mapObject()->position();
+                const bool changedX = oldValue.x() != value.x();
+                const bool changedY = oldValue.y() != value.y();
 
-                        auto objects = mapDocument()->selectedObjects();
-                        QVector<TransformState> states;
-                        states.reserve(objects.size());
+                auto objects = mapDocument()->selectedObjects();
+                QVector<TransformState> states;
+                states.reserve(objects.size());
 
-                        for (MapObject *object : objects) {
-                            states.append(TransformState(object));
-                            auto &state = states.last();
+                for (MapObject *object : objects) {
+                    states.append(TransformState(object));
+                    auto &state = states.last();
 
-                            auto position = state.position();
+                    auto position = state.position();
 
-                            if (changedX)
-                                position.setX(value.x());
-                            if (changedY)
-                                position.setY(value.y());
+                    if (changedX)
+                        position.setX(value.x());
+                    if (changedY)
+                        position.setY(value.y());
 
-                            state.setPosition(position);
-                        }
+                    state.setPosition(position);
+                }
 
-                        push(new TransformMapObjects(mDocument, objects, states));
-                    });
+                push(new TransformMapObjects(mDocument, objects, states));
+            });
 
         mBoundsProperty = new RectFProperty(
-                    tr("Geometry"),
-                    [this] {
-                        return mapObject()->bounds();
-                    },
-                    [this](const QRectF &value) {
-                        const auto oldValue = mapObject()->bounds();
-                        const bool changedX = oldValue.x() != value.x();
-                        const bool changedY = oldValue.y() != value.y();
-                        const bool changedWidth = oldValue.width() != value.width();
-                        const bool changedHeight = oldValue.height() != value.height();
+            tr("Geometry"),
+            [this] {
+                return mapObject()->bounds();
+            },
+            [this](const QRectF &value) {
+                const auto oldValue = mapObject()->bounds();
+                const bool changedX = oldValue.x() != value.x();
+                const bool changedY = oldValue.y() != value.y();
+                const bool changedWidth = oldValue.width() != value.width();
+                const bool changedHeight = oldValue.height() != value.height();
 
-                        auto objects = mapDocument()->selectedObjects();
-                        QVector<TransformState> states;
-                        states.reserve(objects.size());
+                auto objects = mapDocument()->selectedObjects();
+                QVector<TransformState> states;
+                states.reserve(objects.size());
 
-                        for (MapObject *object : objects) {
-                            states.append(TransformState(object));
-                            auto &state = states.last();
+                for (MapObject *object : objects) {
+                    states.append(TransformState(object));
+                    auto &state = states.last();
 
-                            auto position = state.position();
-                            auto size = state.size();
+                    auto position = state.position();
+                    auto size = state.size();
 
-                            if (changedX)
-                                position.setX(value.x());
-                            if (changedY)
-                                position.setY(value.y());
-                            if (changedWidth && object->hasDimensions())
-                                size.setWidth(value.width());
-                            if (changedHeight && object->hasDimensions())
-                                size.setHeight(value.height());
+                    if (changedX)
+                        position.setX(value.x());
+                    if (changedY)
+                        position.setY(value.y());
+                    if (changedWidth && object->hasDimensions())
+                        size.setWidth(value.width());
+                    if (changedHeight && object->hasDimensions())
+                        size.setHeight(value.height());
 
-                            state.setPosition(position);
-                            state.setSize(size);
-                        }
+                    state.setPosition(position);
+                    state.setSize(size);
+                }
 
-                        push(new TransformMapObjects(mDocument, objects, states));
-                    });
+                push(new TransformMapObjects(mDocument, objects, states));
+            });
 
         mRotationProperty = new FloatProperty(
-                    tr("Rotation"),
-                    [this] {
-                        return mapObject()->rotation();
-                    },
-                    [this](const qreal &value) {
-                        changeMapObject(MapObject::RotationProperty, value);
-                    },
-                    this);
+            tr("Rotation"),
+            [this] {
+                return mapObject()->rotation();
+            },
+            [this](const qreal &value) {
+                changeMapObject(MapObject::RotationProperty, value);
+            },
+            this);
         mRotationProperty->setSuffix(QStringLiteral("°"));
 
         mFlippingProperty = new FlippingProperty(
-                    tr("Flipping"),
-                    [this] {
-                        return mapObject()->cell().flags();
-                    },
-                    [this](const int &value) {
-                        const int oldValue = mapObject()->cell().flags();
-                        const bool changedHorizontally = (oldValue & 1) != (value & 1);
-                        const bool changedVertically = (oldValue & 2) != (value & 2);
+            tr("Flipping"),
+            [this] {
+                return mapObject()->cell().flags();
+            },
+            [this](const int &value) {
+                const int oldValue = mapObject()->cell().flags();
+                const bool changedHorizontally = (oldValue & 1) != (value & 1);
+                const bool changedVertically = (oldValue & 2) != (value & 2);
 
-                        QVector<MapObjectCell> objectChanges;
+                QVector<MapObjectCell> objectChanges;
 
-                        for (MapObject *object : mapDocument()->selectedObjects()) {
-                            MapObjectCell mapObjectCell;
-                            mapObjectCell.object = object;
-                            mapObjectCell.cell = object->cell();
-                            if (changedHorizontally)
-                                mapObjectCell.cell.setFlippedHorizontally(value & 1);
-                            if (changedVertically)
-                                mapObjectCell.cell.setFlippedVertically(value & 2);
-                            objectChanges.append(mapObjectCell);
-                        }
+                for (MapObject *object : mapDocument()->selectedObjects()) {
+                    MapObjectCell mapObjectCell;
+                    mapObjectCell.object = object;
+                    mapObjectCell.cell = object->cell();
+                    if (changedHorizontally)
+                        mapObjectCell.cell.setFlippedHorizontally(value & 1);
+                    if (changedVertically)
+                        mapObjectCell.cell.setFlippedVertically(value & 2);
+                    objectChanges.append(mapObjectCell);
+                }
 
-                        auto command = new ChangeMapObjectCells(mDocument, objectChanges);
+                auto command = new ChangeMapObjectCells(mDocument, objectChanges);
 
-                        command->setText(QCoreApplication::translate("Undo Commands",
-                                                                     "Flip %n Object(s)",
-                                                                     nullptr,
-                                                                     objectChanges.size()));
-                        push(command);
-                    });
+                command->setText(QCoreApplication::translate("Undo Commands",
+                                                             "Flip %n Object(s)",
+                                                             nullptr,
+                                                             objectChanges.size()));
+                push(command);
+            });
 
         mTextProperty = new MultilineStringProperty(
-                    tr("Text"),
-                    [this] {
-                        return mapObject()->textData().text;
-                    },
-                    [this](const QString &value) {
-                        changeMapObject(MapObject::TextProperty, value);
-                    });
+            tr("Text"),
+            [this] {
+                return mapObject()->textData().text;
+            },
+            [this](const QString &value) {
+                changeMapObject(MapObject::TextProperty, value);
+            });
 
         mTextAlignmentProperty = new QtAlignmentProperty(
-                    tr("Alignment"),
-                    [this] {
-                        return mapObject()->textData().alignment;
-                    },
-                    [this](const Qt::Alignment &value) {
-                        changeMapObject(MapObject::TextAlignmentProperty,
-                                        QVariant::fromValue(value));
-                    });
+            tr("Alignment"),
+            [this] {
+                return mapObject()->textData().alignment;
+            },
+            [this](const Qt::Alignment &value) {
+                changeMapObject(MapObject::TextAlignmentProperty,
+                                QVariant::fromValue(value));
+            });
 
         mTextFontProperty = new FontProperty(
-                    tr("Font"),
-                    [this] {
-                        return mapObject()->textData().font;
-                    },
-                    [this](const QFont &value) {
-                        changeMapObject(MapObject::TextFontProperty, value);
-                    });
+            tr("Font"),
+            [this] {
+                return mapObject()->textData().font;
+            },
+            [this](const QFont &value) {
+                changeMapObject(MapObject::TextFontProperty, value);
+            });
 
         mTextWordWrapProperty = new BoolProperty(
-                    tr("Word Wrap"),
-                    [this] {
-                        return mapObject()->textData().wordWrap;
-                    },
-                    [this](const bool &value) {
-                        changeMapObject(MapObject::TextWordWrapProperty, value);
-                    });
+            tr("Word Wrap"),
+            [this] {
+                return mapObject()->textData().wordWrap;
+            },
+            [this](const bool &value) {
+                changeMapObject(MapObject::TextWordWrapProperty, value);
+            });
 
         mTextColorProperty = new ColorProperty(
-                    tr("Text Color"),
-                    [this] {
-                        return mapObject()->textData().color;
-                    },
-                    [this](const QColor &value) {
-                        changeMapObject(MapObject::TextColorProperty, value);
-                    });
+            tr("Text Color"),
+            [this] {
+                return mapObject()->textData().color;
+            },
+            [this](const QColor &value) {
+                changeMapObject(MapObject::TextColorProperty, value);
+            });
 
         mObjectProperties = new GroupProperty(tr("Object"));
         mObjectProperties->addProperty(mIdProperty);
@@ -1869,6 +1869,49 @@ public:
             mObjectProperties->addProperty(mTextWordWrapProperty);
             mObjectProperties->addProperty(mTextColorProperty);
         }
+
+        if (mapObject()->shape() == MapObject::Rectangle || mapObject()->shape() == MapObject::Ellipse || mapObject()->shape() == MapObject::Polygon) {
+            mObjectProperties->addSeparator();
+            mImageProperty = new UrlProperty(
+                tr("Image"),
+                [this] { return mapObject()->imageSource(); },
+                [this](const QUrl &value) {
+                    changeMapObject(MapObject::ImageSourceProperty, value);
+                });
+            mImageProperty->setFilter(Utils::readableImageFormatsFilter());
+
+            mShadowProperty = new UrlProperty(
+                tr("Shadow"),
+                [this] { return mapObject()->shadowImageSource(); },
+                [this](const QUrl &value) {
+                    changeMapObject(MapObject::ShadowSourceProperty, value);
+                });
+            mShadowProperty->setFilter(Utils::readableImageFormatsFilter());
+
+            mNormalMapProperty = new UrlProperty(
+                tr("NormalMap"),
+                [this] { return mapObject()->normalMapImageSource(); },
+                [this](const QUrl &value) {
+                    changeMapObject(MapObject::NormalMapSourceProperty, value);
+                });
+            mNormalMapProperty->setFilter(Utils::readableImageFormatsFilter());
+
+            mObjectProperties->addProperty(mImageProperty);
+            mObjectProperties->addProperty(mShadowProperty);
+            mObjectProperties->addProperty(mNormalMapProperty);
+
+            mImageOffsetProperty =  new PointProperty(
+                tr("Image Offset"),
+                [this] {
+                    return mapObject()->imageOffset();
+                },
+                [this](const QPoint &value) {
+                    changeMapObject(MapObject::ImageOffsetProperty, value);
+                });
+
+            mObjectProperties->addProperty(mImageOffsetProperty);
+        }
+
 
         addProperty(mObjectProperties);
 
@@ -1914,6 +1957,13 @@ private:
             emit mTextWordWrapProperty->valueChanged();
         if (change.properties & MapObject::TextColorProperty)
             emit mTextColorProperty->valueChanged();
+
+        if (change.properties & MapObject::ImageSourceProperty)
+            emit mImageProperty->valueChanged();
+        if (change.properties & MapObject::ShadowSourceProperty)
+            emit mShadowProperty->valueChanged();
+        if (change.properties & MapObject::NormalMapSourceProperty)
+            emit mNormalMapProperty->valueChanged();
     }
 
     void updateEnabledState()
@@ -1985,7 +2035,14 @@ private:
     Property *mTextFontProperty;
     Property *mTextWordWrapProperty;
     Property *mTextColorProperty;
+
+    // image properties
+    UrlProperty *mImageProperty;
+    UrlProperty *mShadowProperty;
+    UrlProperty *mNormalMapProperty;
+    Property *mImageOffsetProperty;
 };
+
 
 class TileProperties : public ObjectProperties
 {

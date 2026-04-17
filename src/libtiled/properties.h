@@ -41,6 +41,14 @@ namespace Tiled {
 
 class PropertyType;
 
+
+enum class ImageLabel {
+    Default,
+    Albedo,
+    Shadow,
+    NormalMap
+};
+
 class TILEDSHARED_EXPORT PropertyValue
 {
     Q_GADGET

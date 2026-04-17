@@ -27,6 +27,8 @@ DynamicLibrary {
     cpp.cxxLanguageVersion: "c++17"
     cpp.cxxFlags: {
         var flags = base;
+        flags.push("-Wa,-mbig-obj")
+
         if (qbs.toolchain.contains("msvc")) {
             if (Qt.core.versionMajor >= 6 && Qt.core.versionMinor >= 3)
                 flags.push("/permissive-");

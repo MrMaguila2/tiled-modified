@@ -99,7 +99,8 @@ private:
                     const QUrl &source,
                     const QPixmap &image,
                     const QColor &transColor,
-                    const QSize size);
+                    const QSize size,
+                    ImageLabel label);
 
     QDir mDir;      // The directory in which the file is being saved
     GidMapper mGidMapper;
@@ -416,7 +417,8 @@ void MapWriterPrivate::writeTileset(QXmlStreamWriter &w, const Tileset &tileset,
     // Write the image element
     writeImage(w, tileset.imageSource(), tileset.image(),
                tileset.transparentColor(),
-               QSize(tileset.imageWidth(), tileset.imageHeight()));
+               QSize(tileset.imageWidth(), tileset.imageHeight()),
+               ImageLabel::Default);
 
     const bool isCollection = tileset.isCollection();
     const bool includeAllTiles = isCollection || tileset.anyTileOutOfOrder();
@@ -445,7 +447,7 @@ void MapWriterPrivate::writeTileset(QXmlStreamWriter &w, const Tileset &tileset,
             if (!tile->properties().isEmpty())
                 writeProperties(w, tile->properties());
             if (isCollection)
-                writeImage(w, tile->imageSource(), tile->image(), QColor(), tile->size());
+                writeImage(w, tile->imageSource(), tile->image(), QColor(), tile->size(), ImageLabel::Default);
             if (tile->objectGroup())
                 writeObjectGroup(w, *tile->objectGroup());
             if (tile->isAnimated()) {
@@ -761,6 +763,15 @@ void MapWriterPrivate::writeObject(QXmlStreamWriter &w,
             w.writeAttribute(QStringLiteral("height"), QString::number(size.height()));
     }
 
+    if (shouldWrite(true, isTemplateInstance, mapObject.propertyChanged(MapObject::ImageOffsetProperty))) {
+        const QPoint imageOffset = mapObject.imageOffset();
+
+        if (imageOffset.x() != 0)
+            w.writeAttribute(QStringLiteral("io_x"), QString::number(imageOffset.x()));
+        if (imageOffset.x() != 0)
+            w.writeAttribute(QStringLiteral("io_y"), QString::number(imageOffset.y()));
+    }
+
     const qreal rotation = mapObject.rotation();
     if (shouldWrite(rotation != 0.0, isTemplateInstance, mapObject.propertyChanged(MapObject::RotationProperty)))
         w.writeAttribute(QStringLiteral("rotation"), QString::number(rotation));
@@ -768,6 +779,27 @@ void MapWriterPrivate::writeObject(QXmlStreamWriter &w,
     const qreal opacity = mapObject.opacity();
     if (shouldWrite(opacity != 1.0, isTemplateInstance, mapObject.propertyChanged(MapObject::OpacityProperty)))
         w.writeAttribute(QStringLiteral("opacity"), QString::number(opacity));
+
+    if (shouldWrite(true, isTemplateInstance, mapObject.propertyChanged(MapObject::ImageSourceProperty)))
+    {
+        const QUrl& imageSource = mapObject.imageSource();
+        if (!imageSource.isEmpty())
+            writeImage(w, imageSource, mapObject.image(), QColor(), QSize(), ImageLabel::Albedo);
+    }
+
+    if (shouldWrite(true, isTemplateInstance, mapObject.propertyChanged(MapObject::ShadowSourceProperty)))
+    {
+        const QUrl& imageSource = mapObject.shadowImageSource();
+        if (!imageSource.isEmpty())
+            writeImage(w, imageSource, mapObject.shadowImage(), QColor(), QSize(), ImageLabel::Shadow);
+    }
+
+    if (shouldWrite(true, isTemplateInstance, mapObject.propertyChanged(MapObject::NormalMapSourceProperty)))
+    {
+        const QUrl& imageSource = mapObject.normalMapImageSource();
+        if (!imageSource.isEmpty())
+            writeImage(w, imageSource, mapObject.normalMapImage(), QColor(), QSize(), ImageLabel::NormalMap);
+    }
 
     if (shouldWrite(!mapObject.isVisible(), isTemplateInstance, mapObject.propertyChanged(MapObject::VisibleProperty)))
         w.writeAttribute(QStringLiteral("visible"), QLatin1String(mapObject.isVisible() ? "1" : "0"));
@@ -880,7 +912,7 @@ void MapWriterPrivate::writeImageLayer(QXmlStreamWriter &w,
         w.writeAttribute(QStringLiteral("repeaty"), QString::number(imageLayer.repeatY()));
 
     writeImage(w, imageLayer.imageSource(), imageLayer.image(),
-               imageLayer.transparentColor(), QSize());
+               imageLayer.transparentColor(), QSize(), ImageLabel::Default);
 
     writeProperties(w, imageLayer.properties());
 
@@ -975,12 +1007,30 @@ void MapWriterPrivate::writeImage(QXmlStreamWriter &w,
                                   const QUrl &source,
                                   const QPixmap &image,
                                   const QColor &transColor,
-                                  const QSize size)
+                                  const QSize size,
+                                  ImageLabel label)
+
 {
+
+
     if (source.isEmpty() && image.isNull())
         return;
 
-    w.writeStartElement(QStringLiteral("image"));
+    switch (label) {
+    case ImageLabel::Albedo:
+        w.writeStartElement(QStringLiteral("albedo"));
+        break;
+    case ImageLabel::Shadow:
+        w.writeStartElement(QStringLiteral("shadow"));
+        break;
+    case ImageLabel::NormalMap:
+        w.writeStartElement(QStringLiteral("normal"));
+        break;
+    default:
+        w.writeStartElement(QStringLiteral("image"));
+        break;
+    }
+
 
     if (!source.isEmpty()) {
         QString fileRef = toFileReference(source, mUseAbsolutePaths ? QString()
@@ -1014,7 +1064,7 @@ void MapWriterPrivate::writeImage(QXmlStreamWriter &w,
         w.writeEndElement(); // </data>
     }
 
-    w.writeEndElement(); // </image>
+    w.writeEndElement(); // </label>
 }
 
 

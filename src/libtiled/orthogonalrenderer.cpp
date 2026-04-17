@@ -55,6 +55,8 @@ QRectF OrthogonalRenderer::boundingRect(const MapObject *object) const
     bounds.translate(-alignmentOffset(bounds, object->alignment(map())));
 
     QRectF boundingRect;
+    int xOffset = qAbs(object->imageOffsetX());
+    int yOffset = qAbs(object->imageOffsetY());
 
     if (!object->cell().isEmpty()) {
         if (const Tile *tile = object->cell().tile()) {
@@ -78,19 +80,31 @@ QRectF OrthogonalRenderer::boundingRect(const MapObject *object) const
         switch (object->shape()) {
         case MapObject::Ellipse:
         case MapObject::Capsule:
-        case MapObject::Rectangle:
-            if (bounds.isNull()) {
-                boundingRect = bounds.adjusted(-10 - extraSpace,
-                                               -10 - extraSpace,
-                                               10 + extraSpace + 1,
-                                               10 + extraSpace + 1);
-            } else {
-                boundingRect = bounds.adjusted(-extraSpace,
-                                               -extraSpace,
-                                               extraSpace + 1,
-                                               extraSpace + 1);
+        case MapObject::Rectangle: {
+            const QPixmap& image = object->image();
+            if (!image.isNull()) {
+                float width = qMax(bounds.width(),  float(image.width()));
+                float height = qMax(bounds.height(), float(image.height()));
+
+                // the drawing rect must be extended to not clip the image
+                bounds.setWidth(width);
+                bounds.setHeight(height);
             }
+
+            if (bounds.isNull()) {
+                boundingRect = bounds.adjusted(-10 - extraSpace - xOffset,
+                                               -10 - extraSpace - yOffset,
+                                               10 + extraSpace + 1 + xOffset,
+                                               10 + extraSpace + 1 + yOffset);
+            } else {
+                boundingRect = bounds.adjusted(-extraSpace - xOffset,
+                                               -extraSpace - yOffset,
+                                               extraSpace + 1 + xOffset,
+                                               extraSpace + 1 + yOffset);
+            }
+
             break;
+        }
 
         case MapObject::Point:
             boundingRect = shape(object).boundingRect()
@@ -102,16 +116,28 @@ QRectF OrthogonalRenderer::boundingRect(const MapObject *object) const
 
         case MapObject::Polygon:
         case MapObject::Polyline: {
-            // Make some more room for the starting dot
-            extraSpace += objectLineWidth() * 4;
-
+            const QPixmap& image = object->image();
             const QPointF &pos = object->position();
             const QPolygonF polygon = object->polygon().translated(pos);
             QPolygonF screenPolygon = pixelToScreenCoords(polygon);
-            boundingRect = screenPolygon.boundingRect().adjusted(-extraSpace,
-                                                                 -extraSpace,
-                                                                 extraSpace + 1,
-                                                                 extraSpace + 1);
+            bounds = screenPolygon.boundingRect();
+
+            // Make some more room for the starting dot
+            extraSpace += objectLineWidth() * 4;
+            boundingRect = bounds.adjusted(-extraSpace - xOffset,
+                                           -extraSpace - yOffset,
+                                           extraSpace + 1 + xOffset,
+                                           extraSpace + 1 + yOffset);
+
+            if (!image.isNull()) {
+                float width = qMax(boundingRect.width(),  float(image.width()));
+                float height = qMax(boundingRect.height(), float(image.height()));
+
+                // the drawing rect must be extended to not clip the image
+                boundingRect.setWidth(width);
+                boundingRect.setHeight(height);
+            }
+
             break;
         }
 
@@ -182,9 +208,10 @@ QPainterPath OrthogonalRenderer::shape(const MapObject *object) const
             path.addRoundedRect(bounds, rad, rad, Qt::SizeMode::AbsoluteSize);
         break;
     }
-    case MapObject::Point:
+    case MapObject::Point: {
         path = pointShape(object->position());
         break;
+    }
     case MapObject::Text: {
         path.addRect(bounds);
         break;
@@ -398,6 +425,8 @@ void OrthogonalRenderer::drawMapObject(QPainter *painter,
         shadowPen.setColor(Qt::black);
 
         const QBrush fillBrush = colors.fill.isValid() ? QBrush(colors.fill) : QBrush(Qt::NoBrush);
+        const QPixmap& image = object->image();
+        const QPixmap& shadow = object->shadowImage();
 
         painter->setRenderHint(QPainter::Antialiasing);
 
@@ -422,6 +451,37 @@ void OrthogonalRenderer::drawMapObject(QPainter *painter,
             painter->setPen(linePen);
             painter->setBrush(fillBrush);
             painter->drawRect(bounds);
+
+            // Draw the shadow if it is present
+            if (!shadow.isNull()) {
+                QRectF imageBounds = shadow.rect();
+
+                painter->save();
+                painter->translate(object->imageOffset());
+                painter->setBrush(shadow);
+                painter->setPen(Qt::NoPen);
+                painter->drawRect(imageBounds);
+                painter->restore();
+            }
+
+            // Draw the images if they are present
+            if (!image.isNull()) {
+                QRectF imageBounds = image.rect();
+
+                painter->save();
+                painter->translate(object->imageOffset());
+                painter->setBrush(image);
+                painter->setPen(Qt::NoPen);
+
+                painter->drawRect(imageBounds);
+                if (!shadow.isNull()) { // the shadow is assumed to have the same bounds of the image
+                    painter->setBrush(shadow);
+                    painter->drawRect(imageBounds);
+                }
+
+                painter->restore();
+            }
+
             break;
         }
 
@@ -450,8 +510,29 @@ void OrthogonalRenderer::drawMapObject(QPainter *painter,
                 painter->drawPolygon(screenPolygon);
             else
                 painter->drawPolyline(screenPolygon);
+
             painter->setPen(thickLinePen);
             painter->drawPoint(pointPos);
+
+            // Draw the image if it is present
+            if (!image.isNull()) {
+                QRectF imageBounds = image.rect();
+
+                painter->save();
+                painter->translate(object->imageOffset());
+                painter->setBrush(image);
+                painter->setPen(Qt::NoPen);
+
+                painter->drawRect(imageBounds);
+                painter->drawRect(imageBounds);
+                if (!shadow.isNull()) { // the shadow is assumed to have the same bounds of the image
+                    painter->setBrush(shadow);
+                    painter->drawRect(imageBounds);
+                }
+
+                painter->restore();
+            }
+
             break;
         }
 
@@ -466,6 +547,24 @@ void OrthogonalRenderer::drawMapObject(QPainter *painter,
             painter->setPen(linePen);
             painter->setBrush(fillBrush);
             painter->drawEllipse(bounds);
+
+            if (!image.isNull()) {
+                QRectF imageBounds = image.rect();
+
+                painter->save();
+                painter->translate(object->imageOffset());
+                painter->setBrush(image);
+                painter->setPen(Qt::NoPen);
+                painter->drawRect(imageBounds);
+
+                painter->drawRect(imageBounds);
+                if (!shadow.isNull()) { // the shadow is assumed to have the same bounds of the image
+                    painter->setBrush(shadow);
+                    painter->drawRect(imageBounds);
+                }
+                painter->restore();
+            }
+
             break;
         }
 

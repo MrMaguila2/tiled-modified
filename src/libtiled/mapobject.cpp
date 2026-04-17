@@ -35,6 +35,7 @@
 #include "objectgroup.h"
 #include "objecttemplate.h"
 #include "tile.h"
+#include "imagecache.h"
 
 #include <QFontMetricsF>
 #include <qmath.h>
@@ -303,22 +304,29 @@ MapObjectColors MapObject::effectiveColors() const
 QVariant MapObject::mapObjectProperty(Property property) const
 {
     switch (property) {
-    case NameProperty:          return mName;
-    case VisibleProperty:       return mVisible;
-    case TextProperty:          return mTextData.text;
-    case TextFontProperty:      return mTextData.font;
-    case TextAlignmentProperty: return QVariant::fromValue(mTextData.alignment);
-    case TextWordWrapProperty:  return mTextData.wordWrap;
-    case TextColorProperty:     return mTextData.color;
-    case PositionProperty:      return mPos;
-    case SizeProperty:          return mSize;
-    case RotationProperty:      return mRotation;
-    case OpacityProperty:       return mOpacity;
-    case CellProperty:          Q_ASSERT(false); break;
-    case ShapeProperty:         return mShape;
-    case TemplateProperty:      Q_ASSERT(false); break;
-    case CustomProperties:      Q_ASSERT(false); break;
-    case AllProperties:         Q_ASSERT(false); break;
+    case NameProperty:              return mName;
+    case VisibleProperty:           return mVisible;
+    case TextProperty:              return mTextData.text;
+    case TextFontProperty:          return mTextData.font;
+    case TextAlignmentProperty:     return QVariant::fromValue(mTextData.alignment);
+    case TextWordWrapProperty:      return mTextData.wordWrap;
+    case TextColorProperty:         return mTextData.color;
+    case PositionProperty:          return mPos;
+    case SizeProperty:              return mSize;
+    case RotationProperty:          return mRotation;
+    case OpacityProperty:           return mOpacity;
+    case CellProperty:              Q_ASSERT(false); break;
+    case ShapeProperty:             return mShape;
+    case ImageProperty:             return mImage;
+    case ShadowProperty:            return mShadow;
+    case NormalMapProperty:         return mNormalMap;
+    case ImageSourceProperty:       return mImageSource;
+    case ShadowSourceProperty:      return mShadowSource;
+    case NormalMapSourceProperty:   return mNormalMapSource;
+    case ImageOffsetProperty:       return mImageOffset;
+    case TemplateProperty:          Q_ASSERT(false); break;
+    case CustomProperties:          Q_ASSERT(false); break;
+    case AllProperties:             Q_ASSERT(false); break;
     }
     return QVariant();
 }
@@ -326,22 +334,29 @@ QVariant MapObject::mapObjectProperty(Property property) const
 void MapObject::setMapObjectProperty(Property property, const QVariant &value)
 {
     switch (property) {
-    case NameProperty:          setName(value.toString()); break;
-    case VisibleProperty:       setVisible(value.toBool()); break;
-    case TextProperty:          mTextData.text = value.toString(); break;
-    case TextFontProperty:      mTextData.font = value.value<QFont>(); break;
-    case TextAlignmentProperty: mTextData.alignment = value.value<Qt::Alignment>(); break;
-    case TextWordWrapProperty:  mTextData.wordWrap = value.toBool(); break;
-    case TextColorProperty:     mTextData.color = value.value<QColor>(); break;
-    case PositionProperty:      setPosition(value.toPointF()); break;
-    case SizeProperty:          setSize(value.toSizeF()); break;
-    case RotationProperty:      setRotation(value.toReal()); break;
-    case OpacityProperty:       setOpacity(value.toReal()); break;
-    case CellProperty:          Q_ASSERT(false); break;
-    case ShapeProperty:         setShape(value.value<Shape>()); break;
-    case TemplateProperty:      Q_ASSERT(false); break;
-    case CustomProperties:      Q_ASSERT(false); break;
-    case AllProperties:         Q_ASSERT(false); break;
+    case NameProperty:              setName(value.toString()); break;
+    case VisibleProperty:           setVisible(value.toBool()); break;
+    case TextProperty:              mTextData.text = value.toString(); break;
+    case TextFontProperty:          mTextData.font = value.value<QFont>(); break;
+    case TextAlignmentProperty:     mTextData.alignment = value.value<Qt::Alignment>(); break;
+    case TextWordWrapProperty:      mTextData.wordWrap = value.toBool(); break;
+    case TextColorProperty:         mTextData.color = value.value<QColor>(); break;
+    case PositionProperty:          setPosition(value.toPointF()); break;
+    case SizeProperty:              setSize(value.toSizeF()); break;
+    case RotationProperty:          setRotation(value.toReal()); break;
+    case OpacityProperty:           setOpacity(value.toReal()); break;
+    case CellProperty:              Q_ASSERT(false); break;
+    case ShapeProperty:             setShape(value.value<Shape>()); break;
+    case ImageProperty:             Q_ASSERT(false); break;
+    case ShadowProperty:            Q_ASSERT(false); break;
+    case NormalMapProperty:         Q_ASSERT(false); break;
+    case ImageSourceProperty:       setImage(value.toUrl(), ImageLabel::Albedo); break;
+    case ShadowSourceProperty:      setImage(value.toUrl(), ImageLabel::Shadow); break;
+    case NormalMapSourceProperty:   setImage(value.toUrl(), ImageLabel::NormalMap); break;
+    case ImageOffsetProperty:       setImageOffset(value.toPoint()); break;
+    case TemplateProperty:          Q_ASSERT(false); break;
+    case CustomProperties:          Q_ASSERT(false); break;
+    case AllProperties:             Q_ASSERT(false); break;
     }
 }
 
@@ -379,6 +394,10 @@ MapObject *MapObject::clone() const
     o->setRotation(mRotation);
     o->setOpacity(mOpacity);
     o->setVisible(mVisible);
+    o->setImage(mImage, mImageSource, ImageLabel::Albedo);
+    o->setImage(mShadow, mShadowSource, ImageLabel::Shadow);
+    o->setImage(mNormalMap, mNormalMapSource, ImageLabel::NormalMap);
+    o->setImageOffset(mImageOffset);
     o->setChangedProperties(mChangedProperties);
     o->setObjectTemplate(mObjectTemplate);
     return o;
@@ -395,9 +414,52 @@ void MapObject::copyPropertiesFrom(const MapObject *object)
     setRotation(object->rotation());
     setOpacity(object->opacity());
     setVisible(object->isVisible());
+    setImage(object->image(), object->imageSource(), ImageLabel::Albedo);
+    setImage(object->shadowImage(), object->shadowImageSource(), ImageLabel::Shadow);
+    setImage(object->normalMapImage(), object->normalMapImageSource(), ImageLabel::NormalMap);
+    setImageOffset(object->imageOffset());
     setProperties(object->properties());
     setChangedProperties(object->changedProperties());
     setObjectTemplate(object->objectTemplate());
+}
+
+
+bool MapObject::setImage(const QPixmap &image, const QUrl &source, ImageLabel type)
+{
+    switch (type) {
+    case ImageLabel::Shadow:
+        mShadowSource = source;
+        mShadow = image;
+        return !mShadow.isNull();
+    case ImageLabel::NormalMap:
+        mNormalMapSource = source;
+        mNormalMap = image;
+        return !mNormalMap.isNull();
+    default:
+        mImageSource = source;
+        mImage = image;
+        return !image.isNull();
+    }
+}
+
+/**
+ * Exists only because the Python plugin interface does not handle QUrl (would
+ * be nice to add this). Assumes \a source is a local file when it would
+ * otherwise be a relative URL (without scheme).
+ */
+bool MapObject::setImage(const QImage &image, const QString &source, ImageLabel type)
+{
+    return setImage(QPixmap::fromImage(image), Tiled::toUrl(source), type);
+}
+
+bool MapObject::setImage(const QUrl &url, ImageLabel type)
+{
+    return setImage(ImageCache::loadPixmap(Tiled::urlToLocalFileOrQrc(url)), url, type);
+}
+
+bool MapObject::setImage(const ImageReference &image, ImageLabel type)
+{
+    return setImage(image.create(), image.source, type);
 }
 
 const MapObject *MapObject::templateObject() const
@@ -438,6 +500,18 @@ void MapObject::syncWithTemplate()
 
     if (!propertyChanged(MapObject::VisibleProperty))
         setVisible(base->isVisible());
+
+    if (!propertyChanged(MapObject::ImageSourceProperty))
+        setImage(base->imageSource(), ImageLabel::Albedo);
+
+    if (!propertyChanged(MapObject::ShadowSourceProperty))
+        setImage(base->shadowImageSource(), ImageLabel::Shadow);
+
+    if (!propertyChanged(MapObject::NormalMapSourceProperty))
+        setImage(base->normalMapImageSource(), ImageLabel::NormalMap);
+
+    if (!propertyChanged(MapObject::ImageOffsetProperty))
+        setImageOffset(base->imageOffset());
 }
 
 void MapObject::detachFromTemplate()

@@ -108,22 +108,29 @@ public:
      * Can be used to get/set property values using QVariant.
      */
     enum Property {
-        NameProperty            = 1 << 0,
-        VisibleProperty         = 1 << 1,
-        TextProperty            = 1 << 2,
-        TextFontProperty        = 1 << 3,
-        TextAlignmentProperty   = 1 << 4,
-        TextWordWrapProperty    = 1 << 5,
-        TextColorProperty       = 1 << 6,
-        PositionProperty        = 1 << 7,
-        SizeProperty            = 1 << 8,
-        RotationProperty        = 1 << 9,
-        OpacityProperty         = 1 << 10,
-        CellProperty            = 1 << 11,
-        ShapeProperty           = 1 << 12,
-        TemplateProperty        = 1 << 13,
-        CustomProperties        = 1 << 14,
-        AllProperties           = 0xFF
+        NameProperty  = 1 << 0,
+        VisibleProperty = 1 << 1,
+        TextProperty = 1 << 2,
+        TextFontProperty = 1 << 3,
+        TextAlignmentProperty = 1 << 4,
+        TextWordWrapProperty = 1 << 5,
+        TextColorProperty = 1 << 6,
+        PositionProperty = 1 << 7,
+        SizeProperty = 1 << 8,
+        RotationProperty = 1 << 9,
+        OpacityProperty = 1 << 10,
+        CellProperty = 1 << 11,
+        ShapeProperty = 1 << 12,
+        TemplateProperty = 1 << 13,
+        ImageProperty = 1 << 14,
+        ImageSourceProperty = 1 << 15,
+        ShadowProperty = 1 << 16,
+        ShadowSourceProperty = 1 << 17,
+        NormalMapProperty = 1 << 18,
+        NormalMapSourceProperty = 1 << 19,
+        ImageOffsetProperty = 1 << 20,
+        CustomProperties = 1 << 21,
+        AllProperties = 0xFF
     };
 
     Q_DECLARE_FLAGS(ChangedProperties, Property)
@@ -227,6 +234,28 @@ public:
     MapObject *clone() const;
     void copyPropertiesFrom(const MapObject *object);
 
+    const QPixmap& image() const;
+    const QPixmap& shadowImage() const;
+    const QPixmap& normalMapImage() const;
+
+    const QUrl& imageSource() const;
+    const QUrl& shadowImageSource() const;
+    const QUrl& normalMapImageSource() const;
+
+    bool setImage(const QPixmap &image, const QUrl &source, ImageLabel type);
+    bool setImage(const QImage &image, const QString &source, ImageLabel type);
+    bool setImage(const QUrl &url, ImageLabel type);
+    bool setImage(const ImageReference &image, ImageLabel type);
+
+    const QPoint &imageOffset() const;
+    void setImageOffset(const QPoint &imageOffset);
+
+    qreal imageOffsetX() const;
+    void setImageOffsetX(int x);
+
+    qreal imageOffsetY() const;
+    void setImageOffsetY(int y);
+
     const MapObject *templateObject() const;
 
     void syncWithTemplate();
@@ -255,6 +284,13 @@ private:
     qreal mOpacity = 1.0;
     bool mVisible = true;
     bool mTemplateBase = false;
+    QPixmap mImage;
+    QUrl mImageSource;
+    QPixmap mShadow;
+    QUrl mShadowSource;
+    QPixmap mNormalMap;
+    QUrl mNormalMapSource;
+    QPoint mImageOffset = QPoint(0, 0);
     ChangedProperties mChangedProperties;
 };
 
@@ -519,6 +555,49 @@ inline void MapObject::setPropertyChanged(Property property, bool state)
 
 inline bool MapObject::propertyChanged(Property property) const
 { return mChangedProperties.testFlag(property); }
+
+inline const QPixmap& MapObject::image() const
+{ return mImage; }
+
+inline const QPixmap& MapObject::shadowImage() const
+{ return mShadow; }
+
+inline const QPixmap& MapObject::normalMapImage() const
+{ return mNormalMap; }
+
+
+inline const QUrl& MapObject::imageSource() const
+{
+    return mImageSource;
+}
+
+inline const QUrl& MapObject::shadowImageSource() const
+{
+    return mShadowSource;
+}
+
+inline const QUrl& MapObject::normalMapImageSource() const
+{
+    return mNormalMapSource;
+}
+
+inline const QPoint& MapObject::imageOffset() const
+{ return mImageOffset; }
+
+inline void MapObject::setImageOffset(const QPoint &imageOffset)
+{ mImageOffset = imageOffset; }
+
+inline qreal MapObject::imageOffsetX() const
+{ return mImageOffset.x(); }
+
+inline void MapObject::setImageOffsetX(int x)
+{ mImageOffset.setX(x); }
+
+inline qreal MapObject::imageOffsetY() const
+{ return mImageOffset.y(); }
+
+inline void MapObject::setImageOffsetY(int y)
+{ mImageOffset.setY(y); }
 
 inline bool MapObject::isTemplateInstance() const
 { return mObjectTemplate != nullptr; }

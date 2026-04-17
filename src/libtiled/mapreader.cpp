@@ -648,7 +648,8 @@ void MapReaderPrivate::readTilesetImage(Tileset &tileset)
 
 ImageReference MapReaderPrivate::readImage()
 {
-    Q_ASSERT(xml.isStartElement() && xml.name() == QLatin1String("image"));
+    Q_ASSERT(xml.isStartElement());
+    Q_ASSERT(xml.name() == QLatin1String("image") || xml.name() == QLatin1String("albedo") || xml.name() == QLatin1String("shadow") || xml.name() == QLatin1String("normal"));
 
     const QXmlStreamAttributes atts = xml.attributes();
     const QString source = atts.value(QLatin1String("source")).toString();
@@ -1201,6 +1202,8 @@ std::unique_ptr<MapObject> MapReaderPrivate::readObject()
     const qreal y = atts.value(QLatin1String("y")).toDouble();
     const qreal width = atts.value(QLatin1String("width")).toDouble();
     const qreal height = atts.value(QLatin1String("height")).toDouble();
+    const int imageOffsetX = atts.value(QLatin1String("io_x")).toInt();
+    const int imageOffsetY = atts.value(QLatin1String("io_y")).toInt();
     const auto visibleRef = atts.value(QLatin1String("visible"));
 
     QString className = atts.value(QLatin1String("class")).toString();
@@ -1209,6 +1212,7 @@ std::unique_ptr<MapObject> MapReaderPrivate::readObject()
 
     const QPointF pos(x, y);
     const QSizeF size(width, height);
+    const QPoint imageOffset(imageOffsetX, imageOffsetY);
 
     auto object = std::make_unique<MapObject>(name, className, pos, size);
 
@@ -1219,9 +1223,11 @@ std::unique_ptr<MapObject> MapReaderPrivate::readObject()
     }
 
     object->setId(id);
+    object->setImageOffset(imageOffset);
 
     object->setPropertyChanged(MapObject::NameProperty, !name.isEmpty());
     object->setPropertyChanged(MapObject::SizeProperty, !size.isEmpty());
+    object->setPropertyChanged(MapObject::ImageOffsetProperty);
 
     bool ok;
     const qreal rotation = atts.value(QLatin1String("rotation")).toDouble(&ok);
@@ -1274,6 +1280,18 @@ std::unique_ptr<MapObject> MapReaderPrivate::readObject()
             xml.skipCurrentElement();
             object->setShape(MapObject::Point);
             object->setPropertyChanged(MapObject::ShapeProperty);
+        } else if (xml.name() == QLatin1String("albedo")) {
+            object->setImage(readImage(), ImageLabel::Albedo);
+            object->setPropertyChanged(MapObject::ImageSourceProperty);
+            object->setPropertyChanged(MapObject::ImageProperty);
+        } else if (xml.name() == QLatin1String("shadow")) {
+            object->setImage(readImage(), ImageLabel::Shadow);
+            object->setPropertyChanged(MapObject::ShadowSourceProperty);
+            object->setPropertyChanged(MapObject::ShadowProperty);
+        } else if (xml.name() == QLatin1String("normal")) {
+            object->setImage(readImage(), ImageLabel::NormalMap);
+            object->setPropertyChanged(MapObject::NormalMapSourceProperty);
+            object->setPropertyChanged(MapObject::NormalMapProperty);
         } else {
             readUnknownElement();
         }
